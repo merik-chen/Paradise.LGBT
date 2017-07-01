@@ -4,12 +4,13 @@ app = Flask(__name__)
 
 
 @app.route('/')
-def hello_world():
+def index():
     return '''
     <h1>PARADISE</h1>
     <h4>In a higher place, an eternal place of pleasure and joy.</h4>
+    <p>Hello</p>
     '''
 
 
 if __name__ == '__main__':
-    app.run('0.0.0.0')
+    app.run()
