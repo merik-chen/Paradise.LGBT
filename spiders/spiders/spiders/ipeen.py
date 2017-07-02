@@ -9,7 +9,7 @@ from scrapy.conf import settings
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
 from bson.binary import Binary
-# import Database
+import Database
 import Commons
 import urllib.request
 import pprint
@@ -30,9 +30,9 @@ class IpeenSpider(CrawlSpider):
         'http://www.ipeen.com.tw/taiwan/channel/F',
     )
 
-    # Collection = Database.Mongo['ipeen']
-    #
-    # links_db = Collection['stores']
+    Collection = Database.Mongo['paradise']
+
+    stores_db = Collection['stores']
     # index_db = Collection['links']
 
     rules = (
@@ -68,6 +68,8 @@ class IpeenSpider(CrawlSpider):
 
         if store['link']:
 
+            store['source'] = 'ipeen'
+
             store['hash'] = Commons.make_sha1(store['link'].encode('utf-8'))
 
             store['name'] = article.css('span[itemprop="name"]::text').extract_first()
@@ -89,7 +91,6 @@ class IpeenSpider(CrawlSpider):
             if store['image']:
                 img_res = urllib.request.urlopen(store['image']).read()
                 if img_res:
-                    # img_binary = StringIO(img_res)
                     store['image'] = Binary(img_res)
 
             store['breadcrumb'] = []
@@ -100,15 +101,14 @@ class IpeenSpider(CrawlSpider):
                     if not(_type in store['breadcrumb']) and u'iPeen 愛評網' != _type:
                         store['breadcrumb'].append(_type)
 
-            # self.links_db.update_one(
-            #     {'link': store['link']},
-            #     {
-            #         '$set': store
-            #     }, upsert=True
-            # )
+            self.stores_db.update_one(
+                {'hash': store['hash']},
+                {
+                    '$set': store
+                }, upsert=True
+            )
 
             print('saved', store['name'])
-            pprint.pprint(store)
         else:
             print('skipped', response.url)
 

@@ -12,7 +12,7 @@ Mongo = pymongo.MongoClient(
     socketTimeoutMS=None,
     socketKeepAlive=True
 )
-Collection = Mongo['stores']
-Database = Collection['ipeen']
+Collection = Mongo['paradise']
+Database = Collection['stores']
 
 Redis = redis.Redis(host=app_cfg['redis']['address'])
