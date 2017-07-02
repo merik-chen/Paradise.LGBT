@@ -8,7 +8,7 @@ import pymongo
 import redis
 
 Mongo = pymongo.MongoClient(
-    app_cfg['mongo'],
+    'localhost',
     socketTimeoutMS=None,
     socketKeepAlive=True
 )
