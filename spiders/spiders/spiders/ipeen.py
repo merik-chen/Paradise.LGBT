@@ -87,6 +87,12 @@ class IpeenSpider(CrawlSpider):
             store['latitude'] = response.css('meta[property="place:location:latitude"]::attr("content")').extract_first()
             store['longitude'] = response.css('meta[property="place:location:longitude"]::attr("content")').extract_first()
 
+            if store['latitude'] and store['longitude']:
+                store['geospatial'] = {
+                    'type': "Point",
+                    'coordinates': [float(store['longitude']), float(store['latitude'])]
+                }
+
             store['image'] = article.css('img[itemprop="image"]::attr("src")').extract_first()
             if store['image']:
                 img_res = urllib.request.urlopen(store['image']).read()
