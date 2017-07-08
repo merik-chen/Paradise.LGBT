@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import spiders.Config as config
+
+import os
 import redis
 from flask import Flask, jsonify
 from flask_pymongo import PyMongo
@@ -9,7 +12,7 @@ app = Flask(__name__)
 redis_pool = redis.ConnectionPool()
 
 app.config['MONGO_DBNAME'] = 'paradise'
-app.config['MONGO_URI'] = 'mongodb://localhost:27017/paradise'
+app.config['MONGO_URI'] = 'mongodb://%s:27017/paradise' % config.app_cfg['mongo']['address']
 
 mongo = PyMongo(app)
 
@@ -69,4 +72,4 @@ def api_near_by(lon, lat, radius, unit):
     return jsonify(near_by_stores)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run(host=os.environ.get('HOST'), port=int(os.environ.get('PORT')), debug=os.environ.get('DEBUG') == 'yes')

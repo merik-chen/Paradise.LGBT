@@ -1,26 +1,25 @@
 import os
+from os.path import join, dirname
+from dotenv import load_dotenv
 
-app_env = 'APP_ENV' in os.environ and str(os.environ['APP_ENV']).lower() or ''
+dotenv_path = join(dirname(__file__), '../.env')
+load_dotenv(dotenv_path)
 
-if app_env == 'spider':
+app_env = 'ENV' in os.environ and str(os.environ['ENV']).lower() or ''
+
+if app_env == 'testing':
     app_cfg = {
-        'mongo': {'address': '127.0.0.1', 'port': 27017},
-        'redis': {'address': '127.0.0.1', 'port': 6379},
-        'memcached': {'address': '127.0.0.1', 'port': 11211},
-        'mongoReplica': ['127.0.0.1:27017']
+        'mongo': {'address': 'paradise.lgbt', 'port': 27017},
+        'redis': {'address': 'paradise.lgbt', 'port': 6379},
     }
-elif app_env == 'master':
+elif app_env == 'spider':
     app_cfg = {
-        'mongo': {'address': '127.0.0.1', 'port': 27017},
-        'redis': {'address': '127.0.0.1', 'port': 6379},
-        'memcached': {'address': '127.0.0.1', 'port': 11211},
-        'mongoReplica': ['127.0.0.1:27017']
+        'mongo': {'address': '10.99.0.11', 'port': 27017},
+        'redis': {'address': '10.99.0.11', 'port': 6379},
     }
 else:
     app_cfg = {
         'mongo': {'address': '127.0.0.1', 'port': 27017},
         'redis': {'address': '127.0.0.1', 'port': 6379},
-        'memcached': {'address': '127.0.0.1', 'port': 11211},
-        'mongoReplica': ['127.0.0.1:27017']
     }
 
