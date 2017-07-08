@@ -2,10 +2,16 @@
 
 import redis
 from flask import Flask, jsonify
+from flask_pymongo import PyMongo
 
 app = Flask(__name__)
 
-redis_pool = redis.ConnectionPool(host='paradise.lgbt')
+redis_pool = redis.ConnectionPool()
+
+app.config['MONGO_DBNAME'] = 'paradise'
+app.config['MONGO_URI'] = 'mongodb://localhost:27017/paradise'
+
+mongo = PyMongo(app)
 
 
 @app.route('/')
@@ -44,16 +50,23 @@ def api_near_by(lon, lat, radius, unit):
     }.copy()
 
     for store in search:
-        near_by_stores['stores'].append({
-            'storeHash': store[0],
-            'distance': store[1],
-            'geospatial': {
-                'lon': store[2][0],
-                'lat': store[2][1],
-            }
-        })
+        stores = mongo.db.stores
+        store_detail = stores.find_one({'hash': store[0]}, {'_id': -1, 'name': 1, 'address': 1, 'telephone': 1})
+        if store_detail:
+            near_by_stores['stores'].append({
+                'hash': store[0],
+                'name': store_detail['name'],
+                'address': store_detail['address'],
+                'telephone': store_detail['telephone'],
+
+                'distance': store[1],
+                'geospatial': {
+                    'lon': store[2][0],
+                    'lat': store[2][1],
+                }
+            })
 
     return jsonify(near_by_stores)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0')
