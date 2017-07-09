@@ -4,18 +4,19 @@ import spiders.Config as config
 
 import os
 import redis
+import pymongo
 from flask import Flask, jsonify
-from flask_pymongo import PyMongo
+# from flask_pymongo import PyMongo
 
 app = Flask(__name__)
 
 redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
 
-app.config['MONGO_CONNECT'] = False
-app.config['MONGO_DBNAME'] = 'paradise'
-app.config['MONGO_URI'] = 'mongodb://%s:27017/' % config.app_cfg['mongo']['address']
-
-mongo = PyMongo(app)
+# app.config['MONGO_CONNECT'] = False
+# app.config['MONGO_DBNAME'] = 'paradise'
+# app.config['MONGO_URI'] = 'mongodb://%s:27017/' % config.app_cfg['mongo']['address']
+#
+# mongo = PyMongo(app)
 
 
 @app.route('/')
@@ -53,9 +54,16 @@ def api_near_by(lon, lat, radius, unit):
         'stores': []
     }.copy()
 
+    mongo = pymongo.MongoClient(
+        config.app_cfg['mongo']['address'],
+        socketTimeoutMS=None,
+        socketKeepAlive=True
+    )
+
+    collection = mongo['paradise']
+
     for store in search:
-        stores = mongo.db.stores
-        store_detail = stores.find_one({'hash': store[0]}, {'_id': -1, 'name': 1, 'address': 1, 'telephone': 1})
+        store_detail = collection['stores'].find_one({'hash': store[0]}, {'_id': -1, 'name': 1, 'address': 1, 'telephone': 1})
         if store_detail:
             near_by_stores['stores'].append({
                 'hash': store[0],
