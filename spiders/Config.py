@@ -19,7 +19,7 @@ elif app_env == 'spider':
     }
 else:
     app_cfg = {
-        'mongo': {'address': '127.0.0.1', 'port': 27017},
+        'mongo': {'address': 'paradise.mongo', 'port': 27017},
         'redis': {'address': '127.0.0.1', 'port': 6379},
     }
 
