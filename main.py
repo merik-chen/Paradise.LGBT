@@ -3,6 +3,7 @@
 import spiders.Config as config
 
 import os
+import json
 import redis
 import pymongo
 from flask import Flask, jsonify, request, make_response
@@ -17,6 +18,33 @@ redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
 # app.config['MONGO_URI'] = 'mongodb://%s:27017/' % config.app_cfg['mongo']['address']
 #
 # mongo = PyMongo(app)
+
+
+def __get_store_by_redis(store_id, redis_client):
+    __cache = redis_client.get("cache:store:%s" % store_id)
+    if __cache:
+        __cache = json.loads(__cache.decode('utf-8'))
+    return __cache
+
+
+def __get_store_by_mongodb(store_id, redis_client, collection):
+    store_detail = collection['stores'].find_one({'hash': store_id}, {'_id': 0, 'image': 0})
+    if store_detail:
+        cache_key = "cache:store:%s" % store_id
+        redis_client.set(cache_key, json.dumps(store_detail))
+        redis_client.expire(cache_key, 10)
+    return store_detail
+
+
+def __get_store(store_id, redis_client, collection):
+    __cached = __get_store_by_redis(store_id, redis_client)
+
+    if __cached:
+        __cached['cached'] = True
+    else:
+        __cached = __get_store_by_mongodb(store_id, redis_client, collection)
+
+    return __cached
 
 
 @app.route('/')
@@ -55,16 +83,16 @@ def api_near_by(lon, lat, radius, unit):
         'stores': []
     }.copy()
 
-    mongo = pymongo.MongoClient(
+    mongodb = pymongo.MongoClient(
         config.app_cfg['mongo']['address'],
         socketTimeoutMS=None,
         socketKeepAlive=True
     )
 
-    collection = mongo['paradise']
+    collection = mongodb['paradise']
 
     for store in search:
-        store_detail = collection['stores'].find_one({'hash': store[0]}, {'_id': -1, 'name': 1, 'address': 1, 'telephone': 1})
+        store_detail = __get_store(store[0], redis_client, collection)
         if store_detail:
             near_by_stores['stores'].append({
                 'hash': store[0],
