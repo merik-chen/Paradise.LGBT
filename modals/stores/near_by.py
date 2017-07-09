@@ -35,7 +35,7 @@ def __get_store_by_redis(store_id):
 
 def __get_store_by_mongodb(store_id):
 
-    store_detail = collection['stores'].find_one({'hash': store_id}, {'image': -1})
+    store_detail = collection['stores'].find_one({'hash': store_id}, {'_id': -1, 'image': -1})
 
     if store_detail:
         cache_key = "cache:store:%s" % store_id
