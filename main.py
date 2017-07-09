@@ -4,17 +4,19 @@ import spiders.Config as config
 
 import os
 import redis
-from flask import Flask, jsonify
-from flask_pymongo import PyMongo
+import pymongo
+from flask import Flask, jsonify, request, make_response
+# from flask_pymongo import PyMongo
 
 app = Flask(__name__)
 
 redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
 
-app.config['MONGO_DBNAME'] = 'paradise'
-app.config['MONGO_URI'] = 'mongodb://%s:27017/paradise' % config.app_cfg['mongo']['address']
-
-mongo = PyMongo(app)
+# app.config['MONGO_CONNECT'] = False
+# app.config['MONGO_DBNAME'] = 'paradise'
+# app.config['MONGO_URI'] = 'mongodb://%s:27017/' % config.app_cfg['mongo']['address']
+#
+# mongo = PyMongo(app)
 
 
 @app.route('/')
@@ -28,6 +30,7 @@ def index():
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_near_by(lon, lat, radius, unit):
+
     redis_client = redis.Redis(connection_pool=redis_pool)
     search = redis_client.georadius(
         'stores',
@@ -52,9 +55,16 @@ def api_near_by(lon, lat, radius, unit):
         'stores': []
     }.copy()
 
+    mongo = pymongo.MongoClient(
+        config.app_cfg['mongo']['address'],
+        socketTimeoutMS=None,
+        socketKeepAlive=True
+    )
+
+    collection = mongo['paradise']
+
     for store in search:
-        stores = mongo.db.stores
-        store_detail = stores.find_one({'hash': store[0]}, {'_id': -1, 'name': 1, 'address': 1, 'telephone': 1})
+        store_detail = collection['stores'].find_one({'hash': store[0]}, {'_id': -1, 'name': 1, 'address': 1, 'telephone': 1})
         if store_detail:
             near_by_stores['stores'].append({
                 'hash': store[0],
@@ -69,7 +79,13 @@ def api_near_by(lon, lat, radius, unit):
                 }
             })
 
-    return jsonify(near_by_stores)
+    resp = make_response(jsonify(near_by_stores))
+    resp.headers['X-REAL-IP'] = request.remote_addr
+    resp.headers['X-IS-SECURE'] = request.is_secure
+
+    print(request.headers)
+
+    return resp
 
 if __name__ == '__main__':
     app.run(host=os.environ.get('HOST'), port=int(os.environ.get('PORT')), debug=os.environ.get('DEBUG') == 'yes')
