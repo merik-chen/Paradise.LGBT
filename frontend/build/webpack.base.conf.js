@@ -37,6 +37,10 @@ module.exports = {
         }
       },
       {
+        test: /\.pug/,
+        loaders: ['html-loader', 'pug-html-loader'],
+      },
+      {
         test: /\.vue$/,
         loader: 'vue-loader',
         options: vueLoaderConfig
@@ -45,6 +49,16 @@ module.exports = {
         test: /\.js$/,
         loader: 'babel-loader',
         include: [resolve('src'), resolve('test')]
+      },
+      {
+        test: /\.scss$/,
+        use: [{
+          loader: "style-loader", // creates style nodes from JS strings
+        }, {
+          loader: "css-loader", // translates CSS into CommonJS
+        }, {
+          loader: "sass-loader", // compiles Sass to CSS
+        }],
       },
       {
         test: /\.(png|jpe?g|gif|svg)(\?.*)?$/,
