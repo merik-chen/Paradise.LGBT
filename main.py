@@ -13,7 +13,7 @@ redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
 
 app.config['MONGO_CONNECT'] = False
 app.config['MONGO_DBNAME'] = 'paradise'
-app.config['MONGO_URI'] = 'mongodb://%s:27017/paradise' % config.app_cfg['mongo']['address']
+app.config['MONGO_URI'] = 'mongodb://%s:27017/' % config.app_cfg['mongo']['address']
 
 mongo = PyMongo(app)
 
