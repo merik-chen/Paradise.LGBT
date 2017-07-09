@@ -32,7 +32,7 @@ def __get_store_by_mongodb(store_id, redis_client, collection):
     if store_detail:
         cache_key = "cache:store:%s" % store_id
         redis_client.set(cache_key, json.dumps(store_detail))
-        redis_client.expire(cache_key, 10)
+        redis_client.expire(cache_key, 60)
     return store_detail
 
 
