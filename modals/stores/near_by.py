@@ -49,7 +49,7 @@ def __get_store(store_id):
     __cached = __get_store_by_redis(store_id)
 
     if __cached:
-        __cached = json.loads(__cached)
+        __cached = json.loads(__cached.decode('utf-8'))
         __cached['cached'] = True
     else:
         __cached = __get_store_by_mongodb(store_id)
