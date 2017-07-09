@@ -168,18 +168,17 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
     }.copy()
 
     for store in search:
-        store_detail = __get_store(store[0], redis_client, collection)
+        store_detail = __get_store(store, redis_client, collection)
         if store_detail:
             near_by_stores['stores'].append({
-                'hash': store[0],
+                'hash': store,
                 'name': store_detail['name'],
                 'address': store_detail['address'],
                 'telephone': store_detail['telephone'],
 
-                'distance': store[1],
                 'geospatial': {
-                    'lon': store[2][0],
-                    'lat': store[2][1],
+                    'lon': store_detail['geospatial']['coordinates'][0],
+                    'lat': store_detail['geospatial']['coordinates'][1],
                 }
             })
 
