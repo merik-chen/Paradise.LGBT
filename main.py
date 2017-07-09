@@ -31,9 +31,6 @@ def index():
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_near_by(lon, lat, radius, unit):
 
-    real_ip = request.headers.get('X-Real-IP')
-    forwarded_ip = request.headers.get('X-Forwarded-For')
-
     redis_client = redis.Redis(connection_pool=redis_pool)
     search = redis_client.georadius(
         'stores',
@@ -83,8 +80,8 @@ def api_near_by(lon, lat, radius, unit):
             })
 
     resp = make_response(jsonify(near_by_stores))
-    resp.headers['X-REAL-IP'] = real_ip
-    resp.headers['X-Forwarded-For'] = forwarded_ip
+    resp.headers['X-REAL-IP'] = request.remote_addr
+    resp.headers['X-IS-SECURE'] = request.is_secure
 
     print(request.headers)
 
