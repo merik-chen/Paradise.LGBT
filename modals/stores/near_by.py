@@ -50,7 +50,8 @@ def __get_store(store_id):
     if __cached:
         __cached['cached'] = True
         for key, value in iter(__cached.items()):
-            print(key, value)
+            __cached[key.decode('utf-8')] = value.decode('utf-8')
+            del __cached[key]
     else:
         __cached = __get_store_by_mongodb(store_id)
 
