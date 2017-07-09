@@ -30,7 +30,7 @@ def __search_near_by_store_id_by_redis(lon, lat, radius, unit):
 
 
 def __get_store_by_redis(store_id):
-    return redis_client.hgetall("cache:store:%s" % store_id)
+    return redis_client.get("cache:store:%s" % store_id)
 
 
 def __get_store_by_mongodb(store_id):
