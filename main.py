@@ -9,12 +9,13 @@ from flask_pymongo import PyMongo
 
 app = Flask(__name__)
 
-mongo = PyMongo(app)
-
 redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
 
+app.config['MONGO_CONNECT'] = False
 app.config['MONGO_DBNAME'] = 'paradise'
 app.config['MONGO_URI'] = 'mongodb://%s:27017/paradise?connect=False' % config.app_cfg['mongo']['address']
+
+mongo = PyMongo(app)
 
 
 @app.route('/')
