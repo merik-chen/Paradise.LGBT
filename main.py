@@ -77,6 +77,25 @@ def __search_bear_by_use_mongodb(lon, lat, radius, unit, page, collection):
     return __store_ids
 
 
+def __get_stores_by_id(store_ids, redis_client, collection):
+    stores = []
+    for store in store_ids:
+        store_detail = __get_store(store, redis_client, collection)
+        if store_detail:
+            stores.append({
+                'hash': store,
+                'name': store_detail['name'],
+                'address': store_detail['address'],
+                'telephone': store_detail['telephone'],
+
+                'geospatial': {
+                    'lon': store_detail['geospatial']['coordinates'][0],
+                    'lat': store_detail['geospatial']['coordinates'][1],
+                }
+            })
+    return stores
+
+
 @app.route('/')
 def index():
     return '''
@@ -96,8 +115,6 @@ def api_near_by(lon, lat, radius, unit):
         latitude=lat,
         radius=radius,
         unit=unit,
-        withdist=True,
-        withcoord=True,
         sort='ASC'
     )
 
@@ -121,21 +138,7 @@ def api_near_by(lon, lat, radius, unit):
 
     collection = mongodb['paradise']
 
-    for store in search:
-        store_detail = __get_store(store[0], redis_client, collection)
-        if store_detail:
-            near_by_stores['stores'].append({
-                'hash': store[0],
-                'name': store_detail['name'],
-                'address': store_detail['address'],
-                'telephone': store_detail['telephone'],
-
-                'distance': store[1],
-                'geospatial': {
-                    'lon': store[2][0],
-                    'lat': store[2][1],
-                }
-            })
+    near_by_stores['stores'] = __get_stores_by_id(search, redis_client, collection)
 
     resp = make_response(jsonify(near_by_stores))
     resp.headers['X-REAL-IP'] = request.remote_addr
@@ -151,14 +154,17 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
         socketTimeoutMS=None,
         socketKeepAlive=True
     )
+
     redis_client = redis.Redis(connection_pool=redis_pool)
     collection = mongodb['paradise']
+
     search = __search_bear_by_use_mongodb(lon, lat, radius, unit, page, collection)
 
     near_by_stores = {
         'config': {
             'range': radius,
-            'unit': unit
+            'unit': unit,
+            'page': page
         },
         'center': {
             'lon': lon,
@@ -167,20 +173,7 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
         'stores': []
     }.copy()
 
-    for store in search:
-        store_detail = __get_store(store, redis_client, collection)
-        if store_detail:
-            near_by_stores['stores'].append({
-                'hash': store,
-                'name': store_detail['name'],
-                'address': store_detail['address'],
-                'telephone': store_detail['telephone'],
-
-                'geospatial': {
-                    'lon': store_detail['geospatial']['coordinates'][0],
-                    'lat': store_detail['geospatial']['coordinates'][1],
-                }
-            })
+    near_by_stores['stores'] = __get_stores_by_id(search, redis_client, collection)
 
     resp = make_response(jsonify(near_by_stores))
     resp.headers['X-REAL-IP'] = request.remote_addr
