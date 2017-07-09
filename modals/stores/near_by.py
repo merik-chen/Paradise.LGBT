@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 import redis
 import pymongo
 
@@ -34,12 +35,12 @@ def __get_store_by_redis(store_id):
 
 def __get_store_by_mongodb(store_id):
 
-    store_detail = collection['stores'].find_one({'hash': store_id})
+    store_detail = collection['stores'].find_one({'hash': store_id}, {'image': -1})
 
     if store_detail:
         cache_key = "cache:store:%s" % store_id
-        redis_client.hmset(cache_key, store_detail)
-        redis_client.expire(cache_key, 10 * 60)
+        redis_client.set(cache_key, json.dumps(store_detail))
+        redis_client.expire(cache_key, 10)
 
     return store_detail
 
@@ -48,10 +49,8 @@ def __get_store(store_id):
     __cached = __get_store_by_redis(store_id)
 
     if __cached:
+        __cached = json.loads(__cached)
         __cached['cached'] = True
-        for key, value in iter(__cached.items()):
-            __cached[key.decode('utf-8')] = value.decode('utf-8')
-            del __cached[key]
     else:
         __cached = __get_store_by_mongodb(store_id)
 
