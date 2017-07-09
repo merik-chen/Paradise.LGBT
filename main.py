@@ -5,7 +5,7 @@ import spiders.Config as config
 import os
 import redis
 import pymongo
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 # from flask_pymongo import PyMongo
 
 app = Flask(__name__)
@@ -30,6 +30,10 @@ def index():
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_near_by(lon, lat, radius, unit):
+
+    real_ip = request.headers.get('X-Real-IP')
+    forwarded_ip = request.headers.get('X-Forwarded-For')
+
     redis_client = redis.Redis(connection_pool=redis_pool)
     search = redis_client.georadius(
         'stores',
@@ -78,7 +82,7 @@ def api_near_by(lon, lat, radius, unit):
                 }
             })
 
-    return jsonify(near_by_stores)
+    return jsonify(near_by_stores, headers={'X-REAL-IP': real_ip, 'X-Forwarded-For': forwarded_ip})
 
 if __name__ == '__main__':
     app.run(host=os.environ.get('HOST'), port=int(os.environ.get('PORT')), debug=os.environ.get('DEBUG') == 'yes')
