@@ -83,8 +83,6 @@ def api_near_by(lon, lat, radius, unit):
     resp.headers['X-REAL-IP'] = request.remote_addr
     resp.headers['X-IS-SECURE'] = request.is_secure
 
-    print(request.headers)
-
     return resp
 
 if __name__ == '__main__':
