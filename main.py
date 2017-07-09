@@ -9,6 +9,8 @@ from flask_pymongo import PyMongo
 
 app = Flask(__name__)
 
+mongo = PyMongo(app)
+
 redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
 
 app.config['MONGO_DBNAME'] = 'paradise'
@@ -26,7 +28,6 @@ def index():
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_near_by(lon, lat, radius, unit):
-    mongo = PyMongo(app)
     redis_client = redis.Redis(connection_pool=redis_pool)
     search = redis_client.georadius(
         'stores',
