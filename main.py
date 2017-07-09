@@ -86,7 +86,7 @@ def api_near_by(lon, lat, radius, unit):
     resp.headers['X-REAL-IP'] = real_ip
     resp.headers['X-Forwarded-For'] = forwarded_ip
 
-    print(request.headers.get_all())
+    print(request.headers.keys())
 
     return resp
 
