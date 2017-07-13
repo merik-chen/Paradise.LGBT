@@ -38,7 +38,7 @@ class IpeenSpider(CrawlSpider):
     rules = (
         #  http://www.ipeen.com.tw/search/taiwan/000/1-0-7-0/
         Rule(LinkExtractor(allow=('\/search\/taiwan\/000\/1-0-.+', )), callback='show_1', follow=True),
-        Rule(LinkExtractor(allow=('\/shop\/\d+\-[\w\%]+$', )), callback='parse_article', follow=True),
+        Rule(LinkExtractor(allow=('\/shop\/\d+.*', )), callback='parse_article', follow=True),
     )
 
     custom_settings = {
