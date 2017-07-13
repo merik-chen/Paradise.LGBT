@@ -77,6 +77,26 @@ def __search_bear_by_use_mongodb(lon, lat, radius, unit, page, collection):
     return __store_ids
 
 
+def __search_stores_by_name(query, page, collection):
+    __stores = {}.copy()
+
+    page = page <= 0 and 1 or page
+
+    page -= 1
+    skip = page * 50
+
+    __find = collection['stores'].find(
+        {'segment.name': {'$regex': '^%s' % query}},
+        {'_id': 0, 'hash': 1, 'name': 1},
+        skip=skip, limit=50
+    )
+
+    for __store in __find:
+        __stores[__store['hash']] = __store['name']
+
+    return __stores
+
+
 def __get_stores_by_id(store_ids, redis_client, collection):
     stores = []
     for store in store_ids:
@@ -180,6 +200,25 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
     resp.headers['X-IS-SECURE'] = request.is_secure
 
     return resp
+
+
+@app.route('/api/search/stores/by/name/<string:query>/<int:page>')
+def api_search_store_by_name(query, page):
+    mongodb = pymongo.MongoClient(
+        config.app_cfg['mongo']['address'],
+        socketTimeoutMS=None,
+        socketKeepAlive=True
+    )
+
+    collection = mongodb['paradise']
+    stores = __search_stores_by_name(query, page, collection)
+
+    resp = make_response(jsonify(stores))
+    resp.headers['X-REAL-IP'] = request.remote_addr
+    resp.headers['X-IS-SECURE'] = request.is_secure
+
+    return resp
+
 
 if __name__ == '__main__':
     app.run(host=os.environ.get('HOST'), port=int(os.environ.get('PORT')), debug=os.environ.get('DEBUG') == 'yes')

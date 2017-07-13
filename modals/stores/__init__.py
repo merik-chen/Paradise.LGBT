@@ -1,1 +1,1 @@
-__all__ = ['near_by']
+__all__ = ['near_by', 'store']
