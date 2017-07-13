@@ -209,20 +209,38 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
     return resp
 
 
-@app.route('/api/search/stores/by/name/<string:query>/<int:page>/<any:blur>')
-def api_search_store_by_name(query, page, blur):
+@app.route('/api/search/stores/by/name/<string:query>/<int:page>')
+def api_search_store_by_name(query, page):
     mongodb = pymongo.MongoClient(
         config.app_cfg['mongo']['address'],
         socketTimeoutMS=None,
         socketKeepAlive=True
     )
 
-    is_blur = blur == 'blur'
     collection = mongodb['paradise']
-    stores = __search_stores_by_name(query, page, is_blur, collection)
+    stores = __search_stores_by_name(query, page, False, collection)
 
     resp = make_response(jsonify(stores))
-    resp.headers['X-IS-BLUR'] = is_blur
+    resp.headers['X-IS-BLUR'] = False
+    resp.headers['X-REAL-IP'] = request.remote_addr
+    resp.headers['X-IS-SECURE'] = request.is_secure
+
+    return resp
+
+
+@app.route('/api/search/stores/by/name/<string:query>/<int:page>/blur')
+def api_search_store_by_name(query, page):
+    mongodb = pymongo.MongoClient(
+        config.app_cfg['mongo']['address'],
+        socketTimeoutMS=None,
+        socketKeepAlive=True
+    )
+
+    collection = mongodb['paradise']
+    stores = __search_stores_by_name(query, page, True, collection)
+
+    resp = make_response(jsonify(stores))
+    resp.headers['X-IS-BLUR'] = True
     resp.headers['X-REAL-IP'] = request.remote_addr
     resp.headers['X-IS-SECURE'] = request.is_secure
 
