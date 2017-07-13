@@ -77,7 +77,7 @@ def __search_bear_by_use_mongodb(lon, lat, radius, unit, page, collection):
     return __store_ids
 
 
-def __search_stores_by_name(query, page, collection):
+def __search_stores_by_name(query, page, isBlur, collection):
     __stores = {}.copy()
 
     page = page <= 0 and 1 or page
@@ -86,7 +86,7 @@ def __search_stores_by_name(query, page, collection):
     skip = page * 50
 
     __find = collection['stores'].find(
-        {'segment.name': {'$regex': '^%s' % query}},
+        {'segment.name': {'$regex': '%s%s' % (isBlur and '' or '^', query)}},
         {'_id': 0, 'hash': 1, 'name': 1},
         skip=skip, limit=50
     )
@@ -202,16 +202,17 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
     return resp
 
 
-@app.route('/api/search/stores/by/name/<string:query>/<int:page>')
-def api_search_store_by_name(query, page):
+@app.route('/api/search/stores/by/name/<string:query>/<int:page>/<string:blur>')
+def api_search_store_by_name(query, page, blur):
     mongodb = pymongo.MongoClient(
         config.app_cfg['mongo']['address'],
         socketTimeoutMS=None,
         socketKeepAlive=True
     )
 
+    isBlur = blur == 'blur'
     collection = mongodb['paradise']
-    stores = __search_stores_by_name(query, page, collection)
+    stores = __search_stores_by_name(query, page, isBlur, collection)
 
     resp = make_response(jsonify(stores))
     resp.headers['X-REAL-IP'] = request.remote_addr
