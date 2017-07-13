@@ -85,8 +85,15 @@ def __search_stores_by_name(query, page, is_blur, collection):
     page -= 1
     skip = page * 50
 
+    if is_blur:
+        query_string = "%s" % query
+    else:
+        query_string = "^%s" % query
+
+    print(query_string)
+
     __find = collection['stores'].find(
-        {'segment.name': {'$regex': '%s%s' % (is_blur and '' or '^', query)}},
+        {'segment.name': {'$regex': query_string}},
         {'_id': 0, 'hash': 1, 'name': 1},
         skip=skip, limit=50
     )
