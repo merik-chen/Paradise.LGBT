@@ -215,7 +215,7 @@ def api_near_by(lon, lat, radius, unit):
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>/<int:page>')
 def api_near_by_pagination(lon, lat, radius, unit, page):
-    __record_near_by_logs(lon, lat, radius, unit, request.user_agent, request.remote_addr)
+    __record_near_by_logs(lon, lat, radius, unit, request.user_agent.string, request.remote_addr)
 
     mongodb = pymongo.MongoClient(
         config.app_cfg['mongo']['address'],
