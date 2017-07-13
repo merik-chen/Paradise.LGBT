@@ -209,7 +209,7 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
     return resp
 
 
-@app.route('/api/search/stores/by/name/<string:query>/<int:page>/<string:blur>')
+@app.route('/api/search/stores/by/name/<string:query>/<int:page>/<any:blur>')
 def api_search_store_by_name(query, page, blur):
     mongodb = pymongo.MongoClient(
         config.app_cfg['mongo']['address'],
