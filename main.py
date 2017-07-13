@@ -7,6 +7,8 @@ import json
 import redis
 import pymongo
 from flask import Flask, jsonify, request, make_response
+
+from modals.geohash import decode_exactly, decode as geohash_decode, encode as geohash_encode
 # from flask_pymongo import PyMongo
 
 app = Flask(__name__)
@@ -18,6 +20,43 @@ redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
 # app.config['MONGO_URI'] = 'mongodb://%s:27017/' % config.app_cfg['mongo']['address']
 #
 # mongo = PyMongo(app)
+
+
+class Mongodb:
+    client = None
+    collection = None
+
+    def __init__(self, address='localhost', port=27017):
+        self.client = pymongo.MongoClient(
+            host=address, port=port,
+            socketTimeoutMS=None,
+            socketKeepAlive=True
+        )
+
+        self.collection = self.client['paradise']
+
+
+def __record_near_by_logs(lon, lat, radius, unit, user_agents, ip):
+    __mongodb = Mongodb(address=config.app_cfg['mongo']['address'])
+    __logger = __mongodb.collection['log_geo_near_by']
+
+    geo_hash = geohash_encode(latitude=lat, longitude=lon)
+
+    __logger.update_one(
+        {'geo_hash': geo_hash},
+        {
+            '$set': {
+                'geo_hash': geo_hash,
+                'location': {
+                    'type': 'Point',
+                    'coordinates': [lon, lat]
+                },
+            },
+            '$push': {
+                'logs.%s%s' % (radius, unit): {'ip': ip, 'user_agent': user_agents}
+            }
+        }, upsert=True
+    )
 
 
 def __get_store_by_redis(store_id, redis_client):
@@ -174,8 +213,10 @@ def api_near_by(lon, lat, radius, unit):
     return resp
 
 
-@app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>/page/<int:page>')
+@app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>/<int:page>')
 def api_near_by_pagination(lon, lat, radius, unit, page):
+    __record_near_by_logs(lon, lat, radius, unit, request.user_agent, request.remote_addr)
+
     mongodb = pymongo.MongoClient(
         config.app_cfg['mongo']['address'],
         socketTimeoutMS=None,
