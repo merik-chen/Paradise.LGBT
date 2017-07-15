@@ -9,11 +9,13 @@ import pymongo
 from flask import Flask, jsonify, request, make_response
 
 from modals.geohash import decode_exactly, decode as geohash_decode, encode as geohash_encode
+
 # from flask_pymongo import PyMongo
 
 app = Flask(__name__)
 
 redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
+
 
 # app.config['MONGO_CONNECT'] = False
 # app.config['MONGO_DBNAME'] = 'paradise'
@@ -34,6 +36,16 @@ class Mongodb:
         )
 
         self.collection = self.client['paradise']
+
+
+def __prepare_resp_json_api(link, data):
+    payload = {
+        'links': {
+            'self': link
+        },
+        'data': data
+    }
+    return jsonify(payload)
 
 
 def __record_near_by_logs(lon, lat, radius, unit, user_agents, ip, is_active=False):
@@ -173,7 +185,6 @@ def index():
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_near_by(lon, lat, radius, unit):
-
     redis_client = redis.Redis(connection_pool=redis_pool)
     search = redis_client.georadius(
         'stores',
@@ -243,7 +254,28 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
 
     near_by_stores['stores'] = __get_stores_by_id(search, redis_client, collection)
 
-    resp = make_response(jsonify(near_by_stores))
+    __data = {
+        "type": "search.stores.nearby",
+        "id": None,
+        'meta': {
+            'config': {
+                'range': radius,
+                'unit': unit,
+                'page': page
+            },
+            'center': {
+                'lon': lon,
+                'lat': lat
+            }
+        },
+        'attributes': {
+            'stores': __get_stores_by_id(search, redis_client, collection)
+        }
+    }
+
+    __link = request.path.strip()
+
+    resp = make_response(__prepare_resp_json_api(__link, __data))
     resp.headers['X-REAL-IP'] = request.remote_addr
     resp.headers['X-IS-SECURE'] = request.is_secure
 
