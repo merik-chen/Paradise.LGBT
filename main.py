@@ -43,7 +43,7 @@ def __prepare_resp_json_api(link, data):
         'links': {
             'self': link
         },
-        'data': data
+        'data': data,
     }
     return jsonify(payload)
 
@@ -255,9 +255,9 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
     near_by_stores['stores'] = __get_stores_by_id(search, redis_client, collection)
 
     __data = {
-        "type": "search.stores.nearby",
+        "type": "storeList",
         "id": None,
-        'meta': {
+        'attributes': {
             'config': {
                 'range': radius,
                 'unit': unit,
@@ -266,9 +266,7 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
             'center': {
                 'lon': lon,
                 'lat': lat
-            }
-        },
-        'attributes': {
+            },
             'stores': __get_stores_by_id(search, redis_client, collection)
         }
     }
