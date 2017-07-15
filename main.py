@@ -36,7 +36,7 @@ class Mongodb:
         self.collection = self.client['paradise']
 
 
-def __record_near_by_logs(lon, lat, radius, unit, user_agents, ip):
+def __record_near_by_logs(lon, lat, radius, unit, user_agents, ip, is_active=False):
     __mongodb = Mongodb(address=config.app_cfg['mongo']['address'])
     __logger = __mongodb.collection['log_geo_near_by']
 
@@ -53,7 +53,7 @@ def __record_near_by_logs(lon, lat, radius, unit, user_agents, ip):
                 },
             },
             '$push': {
-                'logs.%s%s' % (radius, unit): {'ip': ip, 'user_agent': user_agents}
+                'logs.%s%s' % (radius, unit): {'ip': ip, 'user_agent': user_agents, 'active': is_active}
             }
         }, upsert=True
     )
@@ -215,7 +215,7 @@ def api_near_by(lon, lat, radius, unit):
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>/<int:page>')
 def api_near_by_pagination(lon, lat, radius, unit, page):
-    __record_near_by_logs(lon, lat, radius, unit, request.user_agent.string, request.remote_addr)
+    __record_near_by_logs(lon, lat, radius, unit, request.user_agent.string, request.remote_addr, True)
 
     mongodb = pymongo.MongoClient(
         config.app_cfg['mongo']['address'],
@@ -286,6 +286,12 @@ def api_search_store_by_name_blur(query, page):
     resp.headers['X-IS-SECURE'] = request.is_secure
 
     return resp
+
+
+@app.route('/api/analytics/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
+def api_analytics_near_by(lon, lat, radius, unit):
+    __record_near_by_logs(lon, lat, radius, unit, request.user_agent.string, request.remote_addr)
+    return jsonify({'status': True})
 
 
 if __name__ == '__main__':
