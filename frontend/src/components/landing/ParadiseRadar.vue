@@ -33,6 +33,7 @@ export default {
       storeList: null,
       currentPosition: null,
       previousPosition: null,
+      shouldUpdatePrePosition: true,
       searchMore: false,
       storeMarkers: [],
       watchID: null,
@@ -57,7 +58,10 @@ export default {
       const self = this
       if ('geolocation' in navigator) {
         self.watchID = navigator.geolocation.watchPosition((position) => {
-          self.previousPosition = self.currentPosition
+          if (self.shouldUpdatePrePosition === true && self.currentPosition) {
+            self.previousPosition = self.currentPosition
+            self.shouldUpdatePrePosition = false
+          }
           self.currentPosition = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
@@ -120,8 +124,10 @@ export default {
         new self.googleMaps.LatLng(self.previousPosition.lat, self.previousPosition.lng)
       const distance =
         self.googleMaps.geometry.spherical.computeDistanceBetween(center, previousLatLng)
+      self.shouldUpdatePrePosition = false
       // 距離大於50m 允許重新搜尋店家
       if (distance > 250) {
+        self.shouldUpdatePrePosition = true
         self.searchMore = true
       }
       self.radar.panTo(center)
