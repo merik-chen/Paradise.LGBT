@@ -36,9 +36,9 @@ database = {
 }.copy()
 
 
-def __prepare_resp_data(type, _id=None, attributes=None, relationships=None, meta=None):
+def __prepare_resp_data(_type, _id=None, attributes=None, relationships=None, meta=None):
     data = {
-        'type': type,
+        'type': _type,
         'id': _id,
     }
 
@@ -72,7 +72,7 @@ def __prepare_resp_json_api(link, data=None, errors=None):
     elif (data is None) and errors:
         payload['errors'] = errors
 
-    resp = make_response(payload)
+    resp = make_response(jsonify(payload))
     resp.headers['Content-type'] = 'application/vnd.api+json'
     return resp
 
