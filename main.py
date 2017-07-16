@@ -6,8 +6,9 @@ import os
 import json
 import redis
 import pymongo
-from flask import Flask, jsonify, request, make_response
+import traceback
 
+from flask import Flask, jsonify, request, make_response, render_template
 from modals.geohash import decode_exactly, decode as geohash_decode, encode as geohash_encode
 
 app = Flask(__name__)
@@ -78,25 +79,36 @@ def __prepare_resp_json_api(link, data=None, errors=None):
 
 
 def __record_near_by_logs(lon, lat, radius, unit, user_agents, ip, is_active=False):
-    __logger = database['mongodb'].collection['log_geo_near_by']
 
-    geo_hash = geohash_encode(latitude=lat, longitude=lon)
+    result = {
+        'done': True
+    }
 
-    __logger.update_one(
-        {'geo_hash': geo_hash},
-        {
-            '$set': {
-                'geo_hash': geo_hash,
-                'location': {
-                    'type': 'Point',
-                    'coordinates': [lon, lat]
+    try:
+        __logger = database['mongodb'].collection['log_geo_near_by']
+
+        geo_hash = geohash_encode(latitude=lat, longitude=lon)
+
+        __logger.update_one(
+            {'geo_hash': geo_hash},
+            {
+                '$set': {
+                    'geo_hash': geo_hash,
+                    'location': {
+                        'type': 'Point',
+                        'coordinates': [lon, lat]
+                    },
                 },
-            },
-            '$push': {
-                'logs.%s%s' % (radius, unit): {'ip': ip, 'user_agent': user_agents, 'active': is_active}
-            }
-        }, upsert=True
-    )
+                '$push': {
+                    'logs.%s%s' % (radius, unit): {'ip': ip, 'user_agent': user_agents, 'active': is_active}
+                }
+            }, upsert=True
+        )
+    except:
+        result['done'] = False
+        result['error'] = traceback.format_exc()
+
+    return result
 
 
 def __get_store_by_redis(store_id):
@@ -213,9 +225,11 @@ def index():
     <p>Hello</p>
     '''
 
+
 @app.route('/radar')
 def radar():
     return render_template('index.html')
+
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_near_by(lon, lat, radius, unit):
@@ -317,8 +331,19 @@ def api_search_store_by_name_blur(query, page):
 
 @app.route('/api/analytics/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_analytics_near_by(lon, lat, radius, unit):
-    __record_near_by_logs(lon, lat, radius, unit, request.user_agent.string, request.remote_addr)
-    return jsonify({'status': True})
+    result = __record_near_by_logs(lon, lat, radius, unit, request.user_agent.string, request.remote_addr)
+
+    if result['done']:
+        data = __prepare_resp_data(
+            'recordResult',
+            attributes={'done': result['done']}
+        )
+
+        resp = __prepare_resp_json_api(request.path.strip(), data)
+    else:
+        resp = __prepare_resp_json_api(request.path.strip(), errors=[result['error']])
+
+    return resp
 
 
 if __name__ == '__main__':
