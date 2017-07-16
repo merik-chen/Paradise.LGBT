@@ -10,20 +10,7 @@ from flask import Flask, jsonify, request, make_response
 
 from modals.geohash import decode_exactly, decode as geohash_decode, encode as geohash_encode
 
-# from flask_pymongo import PyMongo
-
 app = Flask(__name__)
-
-redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
-
-
-# app.config['MONGO_CONNECT'] = False
-# app.config['MONGO_DBNAME'] = 'paradise'
-# app.config['MONGO_URI'] = 'mongodb://%s:27017/' % config.app_cfg['mongo']['address']
-#
-# mongo = PyMongo(app)
-
-database = {}
 
 
 class Mongodb:
@@ -41,7 +28,12 @@ class Mongodb:
         self.collection = self.client['paradise']
 
 
-database['mongodb'] = Mongodb(address=config.app_cfg['mongo']['address'])
+database = {
+    'mongodb': Mongodb(address=config.app_cfg['mongo']['address']),
+    'pool': {
+        'redis': redis.ConnectionPool(host=config.app_cfg['redis']['address'])
+    }
+}.copy()
 
 
 def __prepare_resp_json_api(link, data):
@@ -76,14 +68,16 @@ def __record_near_by_logs(lon, lat, radius, unit, user_agents, ip, is_active=Fal
     )
 
 
-def __get_store_by_redis(store_id, redis_client):
+def __get_store_by_redis(store_id):
+    redis_client = redis.Redis(connection_pool=database['pool']['redis'])
     __cache = redis_client.get("cache:store:%s" % store_id)
     if __cache:
         __cache = json.loads(__cache.decode('utf-8'))
     return __cache
 
 
-def __get_store_by_mongodb(store_id, redis_client, collection):
+def __get_store_by_mongodb(store_id):
+    redis_client = redis.Redis(connection_pool=database['pool']['redis'])
     store_detail = database['mongodb'].collection['stores'].find_one({'hash': store_id}, {'_id': 0, 'image': 0})
     if store_detail:
         cache_key = "cache:store:%s" % store_id
@@ -92,18 +86,18 @@ def __get_store_by_mongodb(store_id, redis_client, collection):
     return store_detail
 
 
-def __get_store(store_id, redis_client, collection):
-    __cached = __get_store_by_redis(store_id, redis_client)
+def __get_store(store_id):
+    __cached = __get_store_by_redis(store_id)
 
     if __cached:
         __cached['cached'] = True
     else:
-        __cached = __get_store_by_mongodb(store_id, redis_client, collection)
+        __cached = __get_store_by_mongodb(store_id)
 
     return __cached
 
 
-def __search_bear_by_use_mongodb(lon, lat, radius, unit, page, collection):
+def __search_bear_by_use_mongodb(lon, lat, radius, unit, page):
     if unit == 'km':
         radius = radius * 1000
 
@@ -133,7 +127,7 @@ def __search_bear_by_use_mongodb(lon, lat, radius, unit, page, collection):
     return __store_ids
 
 
-def __search_stores_by_name(query, page, is_blur, collection):
+def __search_stores_by_name(query, page, is_blur):
     __stores = {}.copy()
 
     page = page <= 0 and 1 or page
@@ -160,10 +154,10 @@ def __search_stores_by_name(query, page, is_blur, collection):
     return __stores
 
 
-def __get_stores_by_id(store_ids, redis_client, collection):
+def __get_stores_by_id(store_ids):
     stores = []
     for store in store_ids:
-        store_detail = __get_store(store, redis_client, collection)
+        store_detail = __get_store(store)
         if store_detail:
             stores.append({
                 'hash': store,
@@ -190,7 +184,7 @@ def index():
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_near_by(lon, lat, radius, unit):
-    redis_client = redis.Redis(connection_pool=redis_pool)
+    redis_client = redis.Redis(connection_pool=database['pool']['redis'])
     search = redis_client.georadius(
         'stores',
         longitude=lon,
@@ -212,15 +206,7 @@ def api_near_by(lon, lat, radius, unit):
         'stores': []
     }.copy()
 
-    mongodb = pymongo.MongoClient(
-        config.app_cfg['mongo']['address'],
-        socketTimeoutMS=None,
-        socketKeepAlive=True
-    )
-
-    collection = mongodb['paradise']
-
-    near_by_stores['stores'] = __get_stores_by_id(search, redis_client, collection)
+    near_by_stores['stores'] = __get_stores_by_id(search)
 
     resp = make_response(jsonify(near_by_stores))
     resp.headers['X-REAL-IP'] = request.remote_addr
@@ -233,18 +219,7 @@ def api_near_by(lon, lat, radius, unit):
 def api_near_by_pagination(lon, lat, radius, unit, page):
     __record_near_by_logs(lon, lat, radius, unit, request.user_agent.string, request.remote_addr, True)
 
-    # mongodb = pymongo.MongoClient(
-    #     config.app_cfg['mongo']['address'],
-    #     socketTimeoutMS=None,
-    #     socketKeepAlive=True
-    # )
-
-    redis_client = redis.Redis(connection_pool=redis_pool)
-    # collection = mongodb['paradise']
-
-    collection = None
-
-    search = __search_bear_by_use_mongodb(lon, lat, radius, unit, page, collection)
+    search = __search_bear_by_use_mongodb(lon, lat, radius, unit, page)
 
     near_by_stores = {
         'config': {
@@ -259,7 +234,7 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
         'stores': []
     }.copy()
 
-    near_by_stores['stores'] = __get_stores_by_id(search, redis_client, collection)
+    near_by_stores['stores'] = __get_stores_by_id(search)
 
     __data = {
         "type": "storeList",
@@ -274,7 +249,7 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
                 'lon': lon,
                 'lat': lat
             },
-            'stores': __get_stores_by_id(search, redis_client, collection)
+            'stores': __get_stores_by_id(search)
         }
     }
 
@@ -289,14 +264,7 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
 
 @app.route('/api/search/stores/by/name/<string:query>/<int:page>')
 def api_search_store_by_name(query, page):
-    mongodb = pymongo.MongoClient(
-        config.app_cfg['mongo']['address'],
-        socketTimeoutMS=None,
-        socketKeepAlive=True
-    )
-
-    collection = mongodb['paradise']
-    stores = __search_stores_by_name(query, page, False, collection)
+    stores = __search_stores_by_name(query, page, False)
 
     resp = make_response(jsonify(stores))
     resp.headers['X-IS-BLUR'] = False
@@ -308,14 +276,7 @@ def api_search_store_by_name(query, page):
 
 @app.route('/api/search/stores/by/name/<string:query>/<int:page>/blur')
 def api_search_store_by_name_blur(query, page):
-    mongodb = pymongo.MongoClient(
-        config.app_cfg['mongo']['address'],
-        socketTimeoutMS=None,
-        socketKeepAlive=True
-    )
-
-    collection = mongodb['paradise']
-    stores = __search_stores_by_name(query, page, True, collection)
+    stores = __search_stores_by_name(query, page, True)
 
     resp = make_response(jsonify(stores))
     resp.headers['X-IS-BLUR'] = True
