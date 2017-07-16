@@ -36,14 +36,45 @@ database = {
 }.copy()
 
 
-def __prepare_resp_json_api(link, data):
+def __prepare_resp_data(type, _id=None, attributes=None, relationships=None, meta=None):
+    data = {
+        'type': type,
+        'id': _id,
+    }
+
+    if attributes:
+        data['attributes'] = attributes
+    if relationships:
+        data['relationships'] = relationships
+    if meta:
+        data['meta'] = meta
+
+    return data
+
+
+def __prepare_resp_json_api(link, data=None, errors=None):
+
     payload = {
         'links': {
             'self': link
         },
-        'data': data,
     }
-    return jsonify(payload)
+
+    if (data is None) and (errors is None):
+        payload['errors'] = [
+            {
+                'status': 400,
+                'title': 'Required params not input'
+            }
+        ]
+    elif data and (errors is None):
+        payload['data'] = data
+    elif (data is None) and errors:
+        payload['errors'] = errors
+
+    resp = make_response(payload)
+    resp.headers['Content-type'] = 'application/vnd.api+json'
+    return resp
 
 
 def __record_near_by_logs(lon, lat, radius, unit, user_agents, ip, is_active=False):
@@ -144,14 +175,16 @@ def __search_stores_by_name(query, page, is_blur):
 
     __find = database['mongodb'].collection['stores'].find(
         {'segment.name': {'$regex': query_string}},
-        {'_id': 0, 'hash': 1, 'name': 1},
+        {'_id': 0, 'hash': 1},
         skip=skip, limit=50
     )
 
-    for __store in __find:
-        __stores[__store['hash']] = __store['name']
+    __store_ids = []
 
-    return __stores
+    for __store in __find:
+        __store_ids.append(__store['hash'])
+
+    return __store_ids
 
 
 def __get_stores_by_id(store_ids):
@@ -208,9 +241,15 @@ def api_near_by(lon, lat, radius, unit):
 
     near_by_stores['stores'] = __get_stores_by_id(search)
 
-    resp = make_response(jsonify(near_by_stores))
-    resp.headers['X-REAL-IP'] = request.remote_addr
-    resp.headers['X-IS-SECURE'] = request.is_secure
+    data = __prepare_resp_data(
+        'storeList',
+        attributes=near_by_stores
+    )
+
+    resp = __prepare_resp_json_api(
+        request.path,
+        data
+    )
 
     return resp
 
@@ -221,25 +260,9 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
 
     search = __search_bear_by_use_mongodb(lon, lat, radius, unit, page)
 
-    near_by_stores = {
-        'config': {
-            'range': radius,
-            'unit': unit,
-            'page': page
-        },
-        'center': {
-            'lon': lon,
-            'lat': lat
-        },
-        'stores': []
-    }.copy()
-
-    near_by_stores['stores'] = __get_stores_by_id(search)
-
-    __data = {
-        "type": "storeList",
-        "id": None,
-        'attributes': {
+    data = __prepare_resp_data(
+        'storeList',
+        attributes={
             'config': {
                 'range': radius,
                 'unit': unit,
@@ -251,37 +274,41 @@ def api_near_by_pagination(lon, lat, radius, unit, page):
             },
             'stores': __get_stores_by_id(search)
         }
-    }
+    )
 
-    __link = request.path.strip()
-
-    resp = make_response(__prepare_resp_json_api(__link, __data))
-    resp.headers['X-REAL-IP'] = request.remote_addr
-    resp.headers['X-IS-SECURE'] = request.is_secure
+    resp = __prepare_resp_json_api(request.path.strip(), data)
 
     return resp
 
 
 @app.route('/api/search/stores/by/name/<string:query>/<int:page>')
 def api_search_store_by_name(query, page):
-    stores = __search_stores_by_name(query, page, False)
+    search = __search_stores_by_name(query, page, False)
 
-    resp = make_response(jsonify(stores))
-    resp.headers['X-IS-BLUR'] = False
-    resp.headers['X-REAL-IP'] = request.remote_addr
-    resp.headers['X-IS-SECURE'] = request.is_secure
+    data = __prepare_resp_data(
+        'storeList',
+        attributes={
+            'stores': __get_stores_by_id(search)
+        }
+    )
+
+    resp = __prepare_resp_json_api(request.path.strip(), data)
 
     return resp
 
 
 @app.route('/api/search/stores/by/name/<string:query>/<int:page>/blur')
 def api_search_store_by_name_blur(query, page):
-    stores = __search_stores_by_name(query, page, True)
+    search = __search_stores_by_name(query, page, True)
 
-    resp = make_response(jsonify(stores))
-    resp.headers['X-IS-BLUR'] = True
-    resp.headers['X-REAL-IP'] = request.remote_addr
-    resp.headers['X-IS-SECURE'] = request.is_secure
+    data = __prepare_resp_data(
+        'storeList',
+        attributes={
+            'stores': __get_stores_by_id(search)
+        }
+    )
+
+    resp = __prepare_resp_json_api(request.path.strip(), data)
 
     return resp
 
