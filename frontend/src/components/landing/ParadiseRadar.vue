@@ -1,7 +1,7 @@
 <template lang='pug'>
   div
-    #searchMore
-      a(@click="searchStores") 搜尋更多
+    #searchMore(v-if='searchMore==true')
+      a(@click='searchStores') 搜尋更多
     #radar
 </template>
 
@@ -51,6 +51,7 @@ export default {
     },
     async searchStores() {
       const self = this
+      self.searchMore = false
       const image = {
         url: 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png',
         // This marker is 20 pixels wide by 32 pixels high.
@@ -93,6 +94,7 @@ export default {
     updatePosition() {
       const self = this
       const center = new self.googleMaps.LatLng(self.currentPosition.lat, self.currentPosition.lng)
+      self.searchMore = true
       self.radar.panTo(center)
       self.marker.setPosition(center)
     },
