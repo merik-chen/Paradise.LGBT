@@ -3,13 +3,18 @@
 </template>
 
 <script>
+import { StoreService } from '@/services/index'
+
 const loadGoogleMapsAPI = require('load-google-maps-api')
+
+const storeService = new StoreService()
 
 export default {
   data() {
     const initData = {
       radar: null,
       marker: null,
+      storeList: null,
     }
 
     return initData
@@ -29,11 +34,27 @@ export default {
         self.radar = new googleMaps.Map(
         document.getElementById('radar'), {
           center,
-          zoom: 18,
+          zoom: 20,
         })
         self.marker = new googleMaps.Marker({
           position: center,
           map: self.radar,
+        })
+        const storesData = storeService.searchByGeo(lat, lng)
+        // self.storeList = storesData.stores
+        // console.log(storesData)
+        storesData.then((data) => {
+          data.stores.forEach((store) => {
+            const storeMaker = new googleMaps.Marker({
+              position: {
+                lat: store.geospatial.lat,
+                lng: store.geospatial.lon,
+              },
+              map: self.radar,
+              title: store.name,
+            })
+            console.log(storeMaker)
+          })
         })
       })
     },
