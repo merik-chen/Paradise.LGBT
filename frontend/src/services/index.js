@@ -1,5 +1,7 @@
-import stores from './stores'
+import Utils from './utils'
+import StoreService from './stores'
 
-export default{
-  stores,
+export {
+  Utils,
+  StoreService,
 }
