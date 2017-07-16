@@ -23,6 +23,8 @@ redis_pool = redis.ConnectionPool(host=config.app_cfg['redis']['address'])
 #
 # mongo = PyMongo(app)
 
+database = {}
+
 
 class Mongodb:
     client = None
@@ -32,10 +34,14 @@ class Mongodb:
         self.client = pymongo.MongoClient(
             host=address, port=port,
             socketTimeoutMS=None,
-            socketKeepAlive=True
+            socketKeepAlive=True,
+            connect=False
         )
 
         self.collection = self.client['paradise']
+
+
+database['mongodb'] = Mongodb(address=config.app_cfg['mongo']['address'])
 
 
 def __prepare_resp_json_api(link, data):
@@ -49,8 +55,7 @@ def __prepare_resp_json_api(link, data):
 
 
 def __record_near_by_logs(lon, lat, radius, unit, user_agents, ip, is_active=False):
-    __mongodb = Mongodb(address=config.app_cfg['mongo']['address'])
-    __logger = __mongodb.collection['log_geo_near_by']
+    __logger = database['mongodb'].collection['log_geo_near_by']
 
     geo_hash = geohash_encode(latitude=lat, longitude=lon)
 
@@ -79,7 +84,7 @@ def __get_store_by_redis(store_id, redis_client):
 
 
 def __get_store_by_mongodb(store_id, redis_client, collection):
-    store_detail = collection['stores'].find_one({'hash': store_id}, {'_id': 0, 'image': 0})
+    store_detail = database['mongodb'].collection['stores'].find_one({'hash': store_id}, {'_id': 0, 'image': 0})
     if store_detail:
         cache_key = "cache:store:%s" % store_id
         redis_client.set(cache_key, json.dumps(store_detail))
@@ -109,7 +114,7 @@ def __search_bear_by_use_mongodb(lon, lat, radius, unit, page, collection):
 
     __store_ids = []
 
-    __find = collection['stores'].find({
+    __find = database['mongodb'].collection['stores'].find({
         'geospatial': {
             '$near': {
                 '$geometry': {'type': "Point", 'coordinates': [lon, lat]},
@@ -143,7 +148,7 @@ def __search_stores_by_name(query, page, is_blur, collection):
 
     print(query_string)
 
-    __find = collection['stores'].find(
+    __find = database['mongodb'].collection['stores'].find(
         {'segment.name': {'$regex': query_string}},
         {'_id': 0, 'hash': 1, 'name': 1},
         skip=skip, limit=50
@@ -228,14 +233,16 @@ def api_near_by(lon, lat, radius, unit):
 def api_near_by_pagination(lon, lat, radius, unit, page):
     __record_near_by_logs(lon, lat, radius, unit, request.user_agent.string, request.remote_addr, True)
 
-    mongodb = pymongo.MongoClient(
-        config.app_cfg['mongo']['address'],
-        socketTimeoutMS=None,
-        socketKeepAlive=True
-    )
+    # mongodb = pymongo.MongoClient(
+    #     config.app_cfg['mongo']['address'],
+    #     socketTimeoutMS=None,
+    #     socketKeepAlive=True
+    # )
 
     redis_client = redis.Redis(connection_pool=redis_pool)
-    collection = mongodb['paradise']
+    # collection = mongodb['paradise']
+
+    collection = None
 
     search = __search_bear_by_use_mongodb(lon, lat, radius, unit, page, collection)
 
