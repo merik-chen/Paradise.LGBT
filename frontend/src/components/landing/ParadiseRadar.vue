@@ -1,7 +1,19 @@
 <template lang='pug'>
   div
-    #searchMore(v-if='searchMore==true')
-      a(@click='searchStores') 搜尋更多
+    #searchMore(v-show='searchMore==true')
+      a(@click='searchStores' href='#') 搜尋更多
+    ul.controlPanel
+      li 
+        a(
+          v-show='watchID > 0' 
+          @click='stopWatchPosition'
+          href='#'
+        ) 停止自動更新位置
+        a(
+          v-show='!!watchID == false' 
+          @click='getUserGeoInfo'
+          href='#'
+        ) 自動更新位置
     #radar
 </template>
 
@@ -20,8 +32,10 @@ export default {
       marker: null,
       storeList: null,
       currentPosition: null,
+      previousPosition: null,
       searchMore: false,
       storeMarkers: [],
+      watchID: null,
     }
 
     return initData
@@ -42,7 +56,8 @@ export default {
     getUserGeoInfo() {
       const self = this
       if ('geolocation' in navigator) {
-        navigator.geolocation.watchPosition((position) => {
+        self.watchID = navigator.geolocation.watchPosition((position) => {
+          self.previousPosition = self.currentPosition
           self.currentPosition = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
@@ -51,6 +66,10 @@ export default {
           alert('無法取得您的地理位置')
         })
       }
+    },
+    stopWatchPosition() {
+      navigator.geolocation.clearWatch(this.watchID)
+      this.watchID = null
     },
     async searchStores() {
       const self = this
@@ -85,7 +104,7 @@ export default {
       self.radar = new self.googleMaps.Map(
       document.getElementById('radar'), {
         center,
-        zoom: 19,
+        zoom: 18,
       })
       self.marker = new self.googleMaps.Marker({
         position: center,
@@ -97,7 +116,14 @@ export default {
     updatePosition() {
       const self = this
       const center = new self.googleMaps.LatLng(self.currentPosition.lat, self.currentPosition.lng)
-      self.searchMore = true
+      const previousLatLng =
+        new self.googleMaps.LatLng(self.previousPosition.lat, self.previousPosition.lng)
+      const distance =
+        self.googleMaps.geometry.spherical.computeDistanceBetween(center, previousLatLng)
+      // 距離大於50m 允許重新搜尋店家
+      if (distance > 250) {
+        self.searchMore = true
+      }
       self.radar.panTo(center)
       self.marker.setPosition(center)
     },
@@ -114,6 +140,7 @@ export default {
     const self = this
     loadGoogleMapsAPI({
       key: 'AIzaSyDFBy8_iLrMYSfTF5py7plQXBXilhYlt5Y',
+      libraries: ['geometry'],
     }).then((googleMaps) => {
       self.googleMaps = googleMaps
       self.getUserGeoInfo()
@@ -123,6 +150,9 @@ export default {
 </script>
 
 <style lang="sass" scoped>
+  a
+    text-decoration: none
+    color: #292929
   #radar
     width: 100%
     height: 100%
@@ -137,4 +167,15 @@ export default {
     box-shadow: 1px 1px 1px #afafaf
     cursor: pointer
     color: #292929
+  .controlPanel
+    position: absolute
+    bottom: 20px
+    right: 100px
+    z-index: 10
+    background: #fff
+    box-shadow: 1px 1px 1px #afafaf
+    list-style-type: none
+    padding: 0
+    li
+      padding: 5px
 </style>
