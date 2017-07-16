@@ -8,7 +8,7 @@ import redis
 import pymongo
 import traceback
 
-from flask import Flask, jsonify, request, make_response
+from flask import Flask, jsonify, request, make_response, render_template
 from modals.geohash import decode_exactly, decode as geohash_decode, encode as geohash_encode
 
 app = Flask(__name__)
@@ -225,9 +225,11 @@ def index():
     <p>Hello</p>
     '''
 
+
 @app.route('/radar')
 def radar():
     return render_template('index.html')
+
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_near_by(lon, lat, radius, unit):
