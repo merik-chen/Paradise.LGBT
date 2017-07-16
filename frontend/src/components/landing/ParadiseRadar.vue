@@ -27,6 +27,9 @@ export default {
     return initData
   },
   watch: {
+    /*
+     * 位置改變後更新/初始地圖
+     */
     currentPosition() {
       if (this.radar) {
         this.updatePosition()
