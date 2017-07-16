@@ -213,6 +213,9 @@ def index():
     <p>Hello</p>
     '''
 
+@app.route('/radar')
+def radar():
+    return render_template('index.html')
 
 @app.route('/api/nearBy/<float:lon>/<float:lat>/<int:radius>/<string:unit>')
 def api_near_by(lon, lat, radius, unit):
