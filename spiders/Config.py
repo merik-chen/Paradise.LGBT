@@ -9,7 +9,7 @@ app_env = 'ENV' in os.environ and str(os.environ['ENV']).lower() or ''
 
 if app_env == 'testing':
     app_cfg = {
-        'mongo': {'address': 'paradise.mongo', 'port': 27017},
+        'mongo': {'address': 'mongodb.paradise.lgbt', 'port': 27017},
         'redis': {'address': 'paradise.lgbt', 'port': 6379},
     }
 elif app_env == 'spider':

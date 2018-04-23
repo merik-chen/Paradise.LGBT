@@ -11,7 +11,10 @@ import traceback
 from flask import Flask, jsonify, request, make_response, render_template
 from modals.geohash import decode_exactly, decode as geohash_decode, encode as geohash_encode
 
+from api import api
+
 app = Flask(__name__)
+app.register_blueprint(api)
 
 
 class Mongodb:
@@ -347,4 +350,4 @@ def api_analytics_near_by(lon, lat, radius, unit):
 
 
 if __name__ == '__main__':
-    app.run(host=os.environ.get('HOST'), port=int(os.environ.get('PORT')), debug=os.environ.get('DEBUG') == 'yes')
+    app.run(host=os.environ.get('HOST'), port=int(os.environ.get('PORT')), debug=True)
